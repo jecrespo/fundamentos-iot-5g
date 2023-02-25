@@ -34,6 +34,7 @@ String ledBuiltinTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/ledbuiltin";
 String pulsadorTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/pulsador";
 String initTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/inicio";
 String publish_15sec = "cursomqtt/" + String(ID_DISPOSITIVO) + "/dato15s";
+String lwtTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/status";
 
 // connection state
 boolean notConnected = true;
@@ -98,11 +99,12 @@ void reconnect(String texto) {
 
   Serial.print("Attempting MQTT connection...");
   // Attempt to connect
-  if (client.connect(ID_DISPOSITIVO, BROKER_USER, BROKER_PASSWORD)) {
+  if (client.connect(ID_DISPOSITIVO, BROKER_USER, BROKER_PASSWORD, lwtTopic.c_str(), 2, true, "KO")) {
     Serial.println("connected to MQTT broker");
     // ... and resubscribe
     client.subscribe(ledBuiltinTopic.c_str());
     client.publish(initTopic.c_str(), texto.c_str());
+    client.publish(lwtTopic.c_str(), "OK",true);
   } else {
     Serial.print("failed, rc=");
     Serial.print(client.state());
@@ -161,7 +163,7 @@ void loop() {
       client.publish(pulsadorTopic.c_str(), "Pulsador Presionado");
     } else {
       Serial.println("Pulsador Soltado");
-      client.publish(pulsadorTopic.c_str(),"Pulsador Soltado");
+      client.publish(pulsadorTopic.c_str(), "Pulsador Soltado");
     }
   }
 }
