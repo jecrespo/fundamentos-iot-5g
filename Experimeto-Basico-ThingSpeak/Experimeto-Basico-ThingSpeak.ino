@@ -87,5 +87,6 @@ void loop() {
     number = 0;
   }
   
+  Serial.println("Siguiente Envio");
   delay(20000); // Wait 20 seconds to update the channel again
 }
