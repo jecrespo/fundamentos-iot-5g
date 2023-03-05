@@ -42,7 +42,7 @@ String pulsadorTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/pulsador";
 String initTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/inicio";
 String temperaturaTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/temperatura";
 String humedadTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/humedad";
-String iluminacionTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/ilumincacion";
+String iluminacionTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/iluminacion";
 String lwtTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/status";
 
 // connection state
@@ -168,9 +168,9 @@ void loop() {
   }
   client.loop();
 
-  //publicar cada 15 segundos
+  //publicar cada 5 segundos
   long now = millis();
-  if (now - lastMsg > 1000) {
+  if (now - lastMsg > 5000) {
     lastMsg = now;
     int chk = DHT.read22(DHT22);
     if (chk == DHTLIB_OK) {
