@@ -24,32 +24,32 @@
 
 #include <MKRNB.h>
 #include "secrets.h"
-#include "ThingSpeak.h" // always include thingspeak header file after other header files and custom macros
+#include "ThingSpeak.h"  // always include thingspeak header file after other header files and custom macros
 
 // PIN Number
-const char PINNUMBER[]     = SECRET_PIN;
+const char PINNUMBER[] = SECRET_PIN;
 
 NBClient client;
 GPRS gprs;
-NB nbAccess; //gsmAccess;
+NB nbAccess;  //gsmAccess;
 
 unsigned long myChannelNumber = SECRET_CH_ID;
-const char * myWriteAPIKey = SECRET_WRITE_APIKEY;
+const char* myWriteAPIKey = SECRET_WRITE_APIKEY;
 
 int number = 0;
 
 void setup() {
   Serial.begin(115200);  //Initialize serial
   while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo native USB port only
+    ;  // wait for serial port to connect. Needed for Leonardo native USB port only
   }
-  
+
   Serial.println("Starting Arduino web client.");
   boolean connected = false;
 
   // wait 10 seconds for connection:
   delay(10000);
-  
+
   while (!connected) {
     if ((nbAccess.begin(PINNUMBER) == NB_READY) && (gprs.attachGPRS() == GPRS_READY)) {
       connected = true;
@@ -65,28 +65,29 @@ void setup() {
   IPAddress LocalIP = gprs.getIPAddress();
   Serial.print("Server IP address= ");
   Serial.println(LocalIP);
-  
-  ThingSpeak.begin(client);  // Initialize ThingSpeak 
+
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
 }
 
 void loop() {
-  
-  // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
-  // pieces of information in a channel.  Here, we write to field 1.
-  int x = ThingSpeak.writeField(myChannelNumber, 1, number, myWriteAPIKey);
-  if(x == 200){
+  Serial.println("Envio Datos");
+
+  // set the fields with the values
+  ThingSpeak.setField(1, 100);
+  ThingSpeak.setField(2, 200);
+  ThingSpeak.setField(3, 300);
+
+  ThingSpeak.setStatus("OK");
+
+  int x = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  Serial.print("Resultado envío: ");
+  Serial.println(x);
+  if (x == 200) {
     Serial.println("Channel update successful.");
-  }
-  else{
+  } else {
     Serial.println("Problem updating channel. HTTP error code " + String(x));
   }
 
-  // change the value
-  number++;
-  if(number > 99){
-    number = 0;
-  }
-  
   Serial.println("Siguiente Envio");
-  delay(20000); // Wait 20 seconds to update the channel again
+  delay(20000);  // Wait 20 seconds to update the channel again
 }
