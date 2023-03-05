@@ -174,17 +174,17 @@ void loop() {
     lastMsg = now;
     int chk = DHT.read22(DHT22);
     if (chk == DHTLIB_OK) {
-      Serial.print("Temperatura: ");
-      Serial.println(DHT.getTemperature(), 1);
+      //Serial.print("Temperatura: ");
+      //Serial.println(DHT.getTemperature(), 1);
       client.publish(temperaturaTopic.c_str(), String(DHT.getTemperature()).c_str());
-      Serial.print("Humedad: ");
-      Serial.println(DHT.getHumidity(), 1);
+      //Serial.print("Humedad: ");
+      //Serial.println(DHT.getHumidity(), 1);
       client.publish(humedadTopic.c_str(), String(DHT.getHumidity()).c_str());
     } else {
       Serial.println("Error sonda");
     }
-    Serial.print("LDR: ");
-    Serial.println(analogRead(LDR));
+    //Serial.print("LDR: ");
+    //Serial.println(analogRead(LDR));
     client.publish(iluminacionTopic.c_str(), String(analogRead(LDR)).c_str());
   }
 
