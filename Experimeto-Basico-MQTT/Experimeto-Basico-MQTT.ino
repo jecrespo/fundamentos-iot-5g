@@ -170,7 +170,7 @@ void loop() {
 
   //publicar cada 5 segundos
   long now = millis();
-  if (now - lastMsg > 5000) {
+  if (now - lastMsg > 1000) {
     lastMsg = now;
     int chk = DHT.read22(DHT22);
     if (chk == DHTLIB_OK) {
