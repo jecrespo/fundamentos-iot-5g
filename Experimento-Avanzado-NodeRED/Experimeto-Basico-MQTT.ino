@@ -7,6 +7,7 @@
 #include <MKRNB.h>  // libreria GSM para GSM Shield
 #include <PubSubClient.h>
 #include "secrets.h"
+#include "DHTStable.h"
 
 /*
 secrets.h define los siguimetes secrets
@@ -16,10 +17,15 @@ secrets.h define los siguimetes secrets
 */
 
 //Pines
-#define LED 3                // Se utiliza para el LED conectado el pin 1 del arduino
-#define PULSADOR 4           // Se utiliza para el pulsador conectado al pin 2
-#define SECRET_PINNUMBER ""  //Usar en caso de tener PIN la tarjeta SIM
+#define LED_ROJO 7
+#define LED_AMARILLO 8
+#define PULSADOR 5
+#define LDR A1
+#define DHT22 9
 
+DHTStable DHT;
+
+#define SECRET_PINNUMBER ""
 const char PINNUMBER[] = SECRET_PINNUMBER;
 
 // initialize the library instance
@@ -29,11 +35,14 @@ NB nbAccess;          // NB access: include a 'true' parameter for debug enabled
 
 IPAddress server(217, 160, 207, 137);  //Dirección del broker MQTT aprendiendonodered.com
 
-String ledTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/led";
+String ledRojoTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/ledrojo";
+String ledAmarilloTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/ledamarillo";
 String ledBuiltinTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/ledbuiltin";
 String pulsadorTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/pulsador";
 String initTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/inicio";
-String publish_15sec = "cursomqtt/" + String(ID_DISPOSITIVO) + "/dato15s";
+String temperaturaTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/temperatura";
+String humedadTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/humedad";
+String iluminacionTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/iluminacion";
 String lwtTopic = "cursomqtt/" + String(ID_DISPOSITIVO) + "/status";
 
 // connection state
@@ -44,11 +53,9 @@ PubSubClient client(gprsclient);
 
 // variables para publicar periodicamente
 long lastMsg = 0;
-int value = 0;
-char msg[50];
 
 // variable pulsador
-boolean anterior_pulsador;
+volatile byte state_pulsador = LOW;
 
 //Funcion Callback para topics suscritos
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -63,11 +70,27 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   if (topic == ledBuiltinTopic) {
     if (payload_s == "ON") {
-      Serial.println("Enciendo led");
+      Serial.println("Enciendo led integrado");
       digitalWrite(LED_BUILTIN, HIGH);
     } else {
-      Serial.println("Apago led");
+      Serial.println("Apago led integrado");
       digitalWrite(LED_BUILTIN, LOW);
+    }
+  } else if (topic == ledRojoTopic) {
+    if (payload_s == "ON") {
+      Serial.println("Enciendo led rojo");
+      digitalWrite(LED_ROJO, HIGH);
+    } else {
+      Serial.println("Apago led rojo");
+      digitalWrite(LED_ROJO, LOW);
+    }
+  } else if (topic == ledAmarilloTopic) {
+    if (payload_s == "ON") {
+      Serial.println("Enciendo led amarillo");
+      digitalWrite(LED_AMARILLO, HIGH);
+    } else {
+      Serial.println("Apago led amarillo");
+      digitalWrite(LED_AMARILLO, LOW);
     }
   }
 }
@@ -103,8 +126,10 @@ void reconnect(String texto) {
     Serial.println("connected to MQTT broker");
     // ... and resubscribe
     client.subscribe(ledBuiltinTopic.c_str());
+    client.subscribe(ledRojoTopic.c_str());
+    client.subscribe(ledAmarilloTopic.c_str());
     client.publish(initTopic.c_str(), texto.c_str());
-    client.publish(lwtTopic.c_str(), "OK",true);
+    client.publish(lwtTopic.c_str(), "OK", true);
   } else {
     Serial.print("failed, rc=");
     Serial.print(client.state());
@@ -124,10 +149,10 @@ void setup() {
   Serial.println("Device id: " + String(ID_DISPOSITIVO));
   Serial.println("Initializing ports...");
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(LED, OUTPUT);             //inicializamos salida para led
+  pinMode(LED_ROJO, OUTPUT);        //inicializamos salida para led
+  pinMode(LED_AMARILLO, OUTPUT);    //inicializamos salida para led
   pinMode(PULSADOR, INPUT_PULLUP);  // inicializamos entrada para pulsador
-
-  anterior_pulsador = digitalRead(PULSADOR);
+  attachInterrupt(digitalPinToInterrupt(PULSADOR), pulsado, FALLING);
 
   Serial.print("Connecting NB IoT / LTE Cat M1 network...");
   reconnect("Inicio");
@@ -143,27 +168,33 @@ void loop() {
   }
   client.loop();
 
-  //publicar cada 15 segundos
+  //publicar cada 5 segundos
   long now = millis();
-  if (now - lastMsg > 15000) {
+  if (now - lastMsg > 1000) {
     lastMsg = now;
-    ++value;
-    snprintf(msg, 50, "hello world 15s #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish(publish_15sec.c_str(), msg);
+    int chk = DHT.read22(DHT22);
+    if (chk == DHTLIB_OK) {
+      //Serial.print("Temperatura: ");
+      //Serial.println(DHT.getTemperature(), 1);
+      client.publish(temperaturaTopic.c_str(), String(DHT.getTemperature()).c_str());
+      //Serial.print("Humedad: ");
+      //Serial.println(DHT.getHumidity(), 1);
+      client.publish(humedadTopic.c_str(), String(DHT.getHumidity()).c_str());
+    } else {
+      Serial.println("Error sonda");
+    }
+    //Serial.print("LDR: ");
+    //Serial.println(analogRead(LDR));
+    client.publish(iluminacionTopic.c_str(), String(analogRead(LDR)).c_str());
   }
 
-  //comprobar pulsación pulsador
-  boolean estado_pulsador = digitalRead(PULSADOR);
-  if (anterior_pulsador != estado_pulsador) {
-    anterior_pulsador = estado_pulsador;
-    if (estado_pulsador == LOW) {  //flanco descendente pull-up
-      Serial.println("Pulsador Presionado");
-      client.publish(pulsadorTopic.c_str(), "Pulsador Presionado");
-    } else {
-      Serial.println("Pulsador Soltado");
-      client.publish(pulsadorTopic.c_str(), "Pulsador Soltado");
-    }
+  if (state_pulsador == HIGH) {
+    state_pulsador = LOW;
+    Serial.println("Pulsador Presionado");
+    client.publish(pulsadorTopic.c_str(), "Pulsador Presionado");
   }
+}
+
+void pulsado() {
+  state_pulsador = HIGH;
 }
